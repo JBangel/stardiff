@@ -1,5 +1,7 @@
 # Stardiff
 
+## THIS APP CURRENTLY DOESN'T DO ANYTHING
+
 Starbound Asset Diff
 
 ## Installation
@@ -14,6 +16,8 @@ Currently only available if you clone it and build it yourself
 ## Usage
 
 Run it against two packed.pak files to see the difference between the files.
+
+    stardiff pakfile1 pakfile2
 
 ## Contributing
 
