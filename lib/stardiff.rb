@@ -10,25 +10,46 @@ module Stardiff
 
       def initialize datasource
         @datasource = datasource
-        @datastring = datasource.datastream.read METADATA_SIZE
+        @datastring = datasource.datastream.read(METADATA_SIZE)
       end
 
       def formatspecifier
-        return @formatspecifier unless @formatspecifier.nil?
+        return @formatspecifier if @formatspecifier
         bfsLength = BLOCK_FORMAT_SPECIFIER.size
         @formatspecifier ||= @datastring[0, bfsLength]
       end
 
+      def headersize
+        return @headersize if @headersize
+        position = BLOCK_FORMAT_SPECIFIER.size
+        @headersize ||= @datastring[position, 4].unpack('L').first
+      end
+
+      def blocksize
+        return @blocksize if @blocksize
+        position = BLOCK_FORMAT_SPECIFIER.size + 4
+        @blocksize ||= @datastring[position, 4].unpack('L').first
+      end
+
+      def parse
+        formatspecifier
+        headersize
+        blocksize
+        self
+      end
+
       def valid?
-        formatspecifier == BLOCK_FORMAT_SPECIFIER
+        (formatspecifier == BLOCK_FORMAT_SPECIFIER) &&
+        (headersize > 0) &&
+        (blocksize > 0)
       end
     end
 
-    attr_reader :datastream
+    attr_reader :datastream, :metadata
 
     def initialize buffer
       @datastream = buffer
-      @metadata  = Metadata.new(self)
+      @metadata  = Metadata.new(self).parse
     end
 
     def valid?
