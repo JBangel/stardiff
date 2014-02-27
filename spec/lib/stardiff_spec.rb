@@ -1,60 +1,29 @@
 require 'spec_helper'
-require 'stringio'
-require 'bindata'
-
-class TestMetadata < BinData::Record
-  endian :little
-
-  string :bfs, :length => 6
-  uint32 :headersize
-  uint32 :blocksize
-end
-
+require 'starbound/package'
 
 describe Stardiff do
   it 'should have a version number' do
     expect(Stardiff::VERSION).to_not be_nil
   end
 
-  context Stardiff::PakFile do
-    context 'when checking blockfile validity' do
-      let(:pakfile) do
-        buffer = StringIO.new
-        @formatspec ||= "SBBF02"
-        buffer.write "#{@formatspec}0000000000"
-        buffer.seek 0
-        pakfile = Stardiff::PakFile.new buffer
-      end
+  it 'should identify the differences between two different asset lists' do
+    asset_list_1 = Starbound::Package.with_assets([
+        Starbound::Asset.new(:name => "Teleporter"),
+        Starbound::Asset.new(:name => "Crafting Table"),
+        Starbound::Asset.new(:name => "Diamond Block")
+    ])
 
-      it 'verifies a correct pakfile blockfile format' do
-        expect(pakfile.valid?).to be true
-      end
+    asset_list_2 = Starbound::Package.with_assets([
+        Starbound::Asset.new(:name => "Chicken"),
+        Starbound::Asset.new(:name => "Crafting Table"),
+        Starbound::Asset.new(:name => "Diamond Block")
+    ])
 
-      it 'fails an incorrect pakfile blockfile format' do
-        @formatspec = "SBBBBB"
-        expect(pakfile.valid?).to be false
-      end
-    end
+    complete_diff = Stardiff::asset_list_diff(asset_list_1, asset_list_2)
+    added_list = complete_diff[:added].map(&:name)
+    removed_list = complete_diff[:removed].map(&:name)
 
-    context 'when checking data sizes' do
-      before(:each) do
-        mdrec = TestMetadata.new
-        mdrec.bfs        = "SBBF02"
-        mdrec.headersize = 27
-        mdrec.blocksize  = 34
-        buffer = StringIO.new
-        buffer.write mdrec.to_binary_s
-        buffer.seek 0
-        @pakfile = Stardiff::PakFile.new buffer
-      end
-
-      it 'pulls the correct header size' do
-        expect(@pakfile.metadata.headersize).to eq 27
-      end
-
-      it 'pulls the correct header size' do
-        expect(@pakfile.metadata.blocksize).to eq 34
-      end
-    end
+    expect(added_list).to eq ["Chicken"]
+    expect(removed_list).to eq ["Teleporter"]
   end
 end
